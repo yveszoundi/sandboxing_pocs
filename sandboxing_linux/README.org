@@ -1,0 +1,7 @@
+#+TITLE: TODO
+
+This will likely be about =seccomp= and =landlock=. I don't think that =landlock= is available on most Linux distributions though.
+
+I might need to think about potential fallbacks to =SELinux= or =AppArmor= as =landlock= availability is not guaranteed
+ - Linux distribution specific for default installation
+ - Users can build their own custom kernels, they can disable =SELinux= and so on...

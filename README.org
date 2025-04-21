@@ -1,0 +1,40 @@
+#+TITLE: Sandboxing POCs
+
+**NOTE: This is all work in progress, with just enough material for me to decide what to do for a specific program**.
+
+I need to remember few considerations and potential challenges.
+
+* Background
+This set of POCs was created to better assess the future direction of the [[https://github.com/rimerosolutions/entrusted][Entrusted document sanitizer program]] (it relies on [[https://podman.io/][Podman]] or [[https://www.docker.com/][Docker]]).
+
+=Entrusted= is available for Windows, Linux and Mac OS. For other operation systems, you can run the Web interface via [[https://github.com/rimerosolutions/entrusted/tree/main/ci_cd/live_cd][Live CD]] (inside a virtual machine).
+
+The long term goal is to rely on OS native provided solutions, instead of delegating process isolation to =Docker/Podman=.
+
+* Approach
+
+For now, I've decided to take a programmatic approach (Except on Mac OS) for the following reasons:
+
+- On Windows, Microsoft changes its vision constantly and deprecates technologies regularly. I wanted to try UWP applications but it seems deprecated, MSIX is only available for Windows 10+.
+- On Linux, I already have [[https://www.man7.org/linux/man-pages/man2/seccomp.2.html][seccomp]] filters for my application (used with =Docker/Podman=):
+  - I can use =seccomp= to restrict specific system calls
+  - I need something else for file permissions that gives me transient permissions (i.e., ideally not [[https://www.redhat.com/en/topics/linux/what-is-selinux][SELinux]], [[https://www.apparmor.net/][AppArmor]], [[https://flatpak.org/][Flatpak]], [[https://snapcraft.io/][Snap]], [[https://firejail.wordpress.com/][Firejail]], etc.). [[https://docs.kernel.org/userspace-api/landlock.html][Landlock]] exists but it's fairly new and it looks complex.
+  - I don't really use =AppArmor= myself, but I find it significantly easier to deal with =AppArmor profiles= than =SELinux= related things
+    - How to deal with package location differences on Linux distributions? What if a user is running [[https://nixos.org/][NixOS]] or [[https://guix.gnu.org/][Guix]] or [[https://www.fosslinux.com/137025/best-future-proof-immutable-linux-distributions.htm][some kind of immutable distro]] instead of the typical Linux installation?
+    - Should all Linux package maintainers adapt file paths to match where they install software (e.g., =/opt/libreoffice= instead of =/usr/lib/libreoffice=)?
+- On Mac OS, it seems like all we can do is deal with [[https://developer.apple.com/documentation/xcode/configuring-the-macos-app-sandbox][entitlements and the App Sandbox]].
+  - =Entitlements= are not as fine-grained and flexible compared to what you could do on Linux.
+  - [[https://igorstechnoclub.com/sandbox-exec/][sandbox-exec]] is not something that Apple wants developer to use and they can change whatever without notice...
+
+* Future
+
+I'd like to transition to a declarative approach to security constraints in the long run.
+- I'd like permissions (e.g., file access) to be transient in nature, only available when a programs needs it and while it's running
+- Preferrably it needs to be more fine-grained than what Mac OS offers with its sandbox, so that developers don't feel to handicapped
+- The user should understand application capabilities easily and not be bother constantly with popups to grant permissions (unless explicitly desired)
+
+With a declarative approach to security, I could focus on application features and maybe other people can take care of software packaging for a given operating system.
+- I'm not a security expert, but I'm also probably not below the "average expert" on the Internet
+- There are things that I can't do time-wise as it requires too much testing and interactions with operating systems that I barely use:
+  - At some point in my life I spent several years without touching a Windows computer. I was using mostly Linux, FreeBSD, occasionally "Mac OS" ([[https://en.wikipedia.org/wiki/Hackintosh][Hackintosh]] around ~2010)
+  - While I can create packages, installers, Live CDs and so on, I'd rather spend my time at the application development/design level

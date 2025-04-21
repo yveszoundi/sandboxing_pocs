@@ -1,0 +1,59 @@
+#+TITLE: Windows AppContainer Isolation Experiments
+
+* Rationale
+Understand how to sandbox applications running on Windows without relying on third-party solutions such as [[https://www.docker.com/][Docker]] or [[https://podman.io/][Podman]].
+- Asking normal non-technical users to install Docker is not viable (What is it? How to install it? How to start it? When to upgrade it? etc.)
+- I do not want to become a Docker or Podman expert. I just want to use it as needed and mostly in the context of experimentation or Cloud computing.
+
+* POC overview
+** Background
+The goal is to restrict file access to a program that just needs to read a text file (and nothing else)
+- The sandoxer program launches a "command-line executable" in an isolated environment (AppContainer isolation)
+- The command-line executable needs to access a text file and reads its contents (e.g., =notes.txt=)
+- For everything to work, the sandboxer program must ensure that read-only access is granted to the command-line executable (file access denied permissions)
+- Once the "command-line executable" process has exited, the sandboxer program needs to remove previously granted read-only file access to =notes.txt=.
+  - The "command-line executable" process runs in an isolated environment
+  - Without any explicitly granted permissions, files cannot be read from let's say the "Documents" folder of a given user
+  - The goal is to programmatically "do the right" thing instead continuously asking the user if it's OK to do so    
+
+** Diagram
+
+[[./sandboxing.png]]
+
+* Learnings
+- Programmatic and correct sandboxing is hard to write without a framework (Windows or any other Operating System):
+  - It requires a deep understanding of Windows APIs and Windows security model
+  - It's unclear which technology will get discontinued with Microsoft (e.g., [[https://www.thurrott.com/dev/258377/microsoft-officially-deprecates-uwp][UWP applications]])
+- In the future, it's probably best to leverage [[https://learn.microsoft.com/en-us/windows/msix/overview][MSIX]] packaging (Windows 10 and later)
+
+* Notes
+
+- There are multiple ways to achieve the same result with common code paths (e.g., [[https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw][CreateProcessAsUserW]] and [[https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-duplicatetokenex][token manipulation]])
+- In [[https://www.rust-lang.org/][Rust]], there are couple of annoyances when writing Windows specific code
+  - Sometimes, we need to keep unused variables to ensure that pointers are not discarded/freed
+  - The code is much more verbose compared to other programming languages such as [[https://en.wikipedia.org/wiki/C_(programming_language)][C]] or [[https://en.wikipedia.org/wiki/C%2B%2B][C++]]
+- It seems that the best way to progagate arguments to a sandboxed command-line program is via environment variable
+  - It doesn't seem possible to modify environments variable within AppContainer using the [[https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw][CreateProcessW]] function
+  - We just set environment variables holding program parameters process, Windows APIs will automatically propagate it to the sandboxed process
+  - Passing program parameters such as a file location in =CreateProcessW= can lead to unexpected results (Path redirection/rewriting)    
+- Error handling is important to ensure that allocated resources are disposed properly
+  - Programmic errors can lead to cryptic/ambiguous error messages, especially for people like me that don't really use Windows
+  - Occasionally I see weird error messages that disappears on their own, after subsequent executions (Probably error handling and resources cleanup)
+
+* References
+- AppContainer isolation
+  - https://learn.microsoft.com/en-us/windows/win32/secauthz/appcontainer-isolation
+  - https://github.com/M2Team/Privexec
+  - https://scorpiosoftware.net/2019/01/15/fun-with-appcontainers/
+  - https://github.com/trailofbits/appjaillauncher-rs
+  - https://github.com/WildByDesign/AppContainer-Launcher
+  - https://github.com/microsoft/SandboxSecurityTools
+- MSIX 
+  - https://learn.microsoft.com/en-us/windows/msix/
+  - https://learn.microsoft.com/en-us/windows/msix/msix-container
+  - https://learn.microsoft.com/en-us/windows/msix/packaging-tool/create-app-package
+- UWP
+  - https://learn.microsoft.com/en-us/windows/uwp/get-started/
+  - https://learn.microsoft.com/en-us/windows/uwp/develop/
+  - https://github.com/bdbai/firstuwp-rs
+  - https://learn.microsoft.com/en-us/windows/uwp/packaging/
