@@ -20,6 +20,15 @@ The goal is to restrict file access to a program that just needs to read a text 
 
 [[./sandboxing.png]]
 
+* Usage
+
+I didn't include the =myUnixCatLikeProgram=, but it's just a trivial application that accepts a file name parameter and then prints the contents of that file to the standard output (Just like the =cat= command on Unix/Linux).
+
+#+begin_src sh
+cargo build
+  ./target/debug/sandboxing_windows.exe myUnixCatLikeProgram aTextFile
+#+end_src
+
 * Learnings
 - Programmatic and correct sandboxing is hard to write without a framework (Windows or any other Operating System):
   - It requires a deep understanding of Windows APIs and Windows security model
